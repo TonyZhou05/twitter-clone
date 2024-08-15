@@ -1,0 +1,15 @@
+extends layouts/login-layout.pug
+block content
+    .loginContainer 
+        h1 login 
+        form(method="post") 
+
+            p #{error_message}
+            //- input#logUserName(type="text", name="logUserName", value=logUserName, placeholder="username or email", required="")
+            //- input#logPassword(type="password", name="logPassword", value=logPassword, placeholder="password", required="")
+
+            input#logUserName(type="text", name="logUserName", value="tonglizhou0508@gmail.com", placeholder="username or email", required="")
+            input#logPassword(type="password", name="logPassword", value="0508Tony", placeholder="password", required="")
+            input#submit(type="submit", value="login")
+        // redirect the page to /register root
+        a(href="/register") Need an account? Register here
