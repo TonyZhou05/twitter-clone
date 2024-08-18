@@ -7,15 +7,18 @@ const User = require('../../schemas/UserSchema');
 // render the login root page
 router.get("/", (req, res, next) => {
     Post.find()
-    // populate the user
-    .sort({"createdAt": -1})
     .populate("postedBy")
-    .then(results => res.status(200).send(results))
-    .catch(err => {
-        console.log(err);
+    .populate("retweetData")
+    .sort({ "createdAt": -1 })
+    .then(async results => {
+        results = await User.populate(results, { path: "retweetData.postedBy"});
+        res.status(200).send(results);
+    })
+    .catch(error => {
+        console.log(error);
         res.sendStatus(400);
     })
-});
+})
 
 // Post request router that defines the post endpoint
 router.post("/", async (req, res, next) => {
@@ -68,23 +71,36 @@ router.put("/:id/like", async (req, res, next) => {
 })
 
 router.post("/:id/retweet", async (req, res, next) => {
-
-    return res.status(200).send('Yee Hah')
-
     var postId = req.params.id;
     var userId = req.session.user._id;
 
-    var isLiked = req.session.user.likes && req.session.user.likes.includes(postId);
-
-    var option = isLiked ? "$pull" : "$addToSet"
-    // Insert user liked and retrieve the updated user from the db
-    req.session.user = await User.findByIdAndUpdate(userId, { [option] : { likes: postId } }, { new: true })
+    // Try and delete retweet
+    var deletedPost = await Post.findOneAndDelete({ postedBy: userId, retweetData: postId })
     .catch(err => {
         console.log(err);
         res.sendStatus(400);
     })
 
-    var post = await Post.findByIdAndUpdate(postId, { [option] : { likes: userId } }, { new: true })
+    var option = deletedPost != null ? "$pull" : "$addToSet"
+
+    var repost = deletedPost;
+
+    if (repost == null) {
+        repost = await Post.create({ postedBy: userId, retweetData: postId })
+        .catch(err => {
+            console.log(err);
+            res.sendStatus(400);
+        })
+    }
+
+    // Insert user retweeted and retrieve the updated user from the db
+    req.session.user = await User.findByIdAndUpdate(userId, { [option] : { retweets: repost._id } }, { new: true })
+    .catch(err => {
+        console.log(err);
+        res.sendStatus(400);
+    })
+
+    var post = await Post.findByIdAndUpdate(postId, { [option] : { retweetUsers: userId } }, { new: true })
     .catch(err => {
         console.log(err);
         res.sendStatus(400);
