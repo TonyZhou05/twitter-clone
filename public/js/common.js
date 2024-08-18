@@ -31,6 +31,58 @@ $("#submitPostButton").click((event) => {
     })
 })
 
+$(document).on("click", ".likeButton", event => {
+    var button = $(event.target);
+    var post_id = getPostIdFromElement(button);
+
+    // Make a PUT request to the server to change the data
+    $.ajax({
+        url: `/api/posts/${post_id}/like`,
+        type: 'PUT',
+        success: postData => {
+            console.log(postData.likes.length);
+
+            button.find("span").text(postData.likes.length || "");
+
+            if (postData.likes.includes(userLoggedIn._id)) {
+                button.addClass("active");
+            } else {
+                button.removeClass("active");
+            }
+        }
+    })
+})
+
+$(document).on("click", ".retweetButton", event => {
+    var button = $(event.target);
+    var post_id = getPostIdFromElement(button);
+
+    // Make a PUT request to the server to change the data
+    $.ajax({
+        url: `/api/posts/${post_id}/retweet`,
+        type: 'POST',
+        success: postData => {
+            console.log(postData);
+            // button.find("span").text(postData.likes.length || "");
+
+            // if (postData.likes.includes(userLoggedIn._id)) {
+            //     button.addClass("active");
+            // } else {
+            //     button.removeClass("active");
+            // }
+        }
+    })
+})
+
+function getPostIdFromElement(element) {
+    var isRoot = element.hasClass("post");
+    var rootElement = isRoot ? element : element.closest('.post');
+    var postId = rootElement.data().id;
+
+    if (postId === undefined) return;
+
+    return postId;
+}
 function createPostHTML(postData) {
     
     var postedBy = postData.postedBy;
@@ -40,8 +92,10 @@ function createPostHTML(postData) {
 
     var displayName = postedBy.firstName + " " + postedBy.lastName;
     var timeStamp = timeDifference(new Date(), new Date(postData.createdAt));
+    
+    var likeButtonActiveClass = postData.likes.includes(userLoggedIn._id) ? "active": "";
 
-    return `<div class='post'>
+    return `<div class='post' data-id='${postData._id}'>
                 <div class='mainContentContainer'>
                     <div class='userImageContainer'>
                         <img src='${postedBy.profilePic}'>
@@ -61,14 +115,15 @@ function createPostHTML(postData) {
                                     <i class='far fa-comment'></i> 
                                 </button>
                             </div>
-                            <div class='postButtonContainer'>
-                                <button>
+                            <div class='postButtonContainer green'>
+                                <button class='retweetButton ${likeButtonActiveClass}'>
                                     <i class='fas fa-retweet'></i> 
                                 </button>
                             </div>
-                            <div class='postButtonContainer'>
-                                <button>
+                            <div class='postButtonContainer red'>
+                                <button class='likeButton ${likeButtonActiveClass}'>
                                     <i class='far fa-heart'></i> 
+                                    <span>${postData.likes.length || ""}</span>
                                 </button>
                             </div>
                         </div>

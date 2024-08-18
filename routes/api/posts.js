@@ -44,4 +44,53 @@ router.post("/", async (req, res, next) => {
     })
 });
 
+router.put("/:id/like", async (req, res, next) => {
+    var postId = req.params.id;
+    var userId = req.session.user._id;
+
+    var isLiked = req.session.user.likes && req.session.user.likes.includes(postId);
+
+    var option = isLiked ? "$pull" : "$addToSet"
+    // Insert user liked and retrieve the updated user from the db
+    req.session.user = await User.findByIdAndUpdate(userId, { [option] : { likes: postId } }, { new: true })
+    .catch(err => {
+        console.log(err);
+        res.sendStatus(400);
+    })
+
+    var post = await Post.findByIdAndUpdate(postId, { [option] : { likes: userId } }, { new: true })
+    .catch(err => {
+        console.log(err);
+        res.sendStatus(400);
+    })
+
+    return res.status(200).send(post);
+})
+
+router.post("/:id/retweet", async (req, res, next) => {
+
+    return res.status(200).send('Yee Hah')
+
+    var postId = req.params.id;
+    var userId = req.session.user._id;
+
+    var isLiked = req.session.user.likes && req.session.user.likes.includes(postId);
+
+    var option = isLiked ? "$pull" : "$addToSet"
+    // Insert user liked and retrieve the updated user from the db
+    req.session.user = await User.findByIdAndUpdate(userId, { [option] : { likes: postId } }, { new: true })
+    .catch(err => {
+        console.log(err);
+        res.sendStatus(400);
+    })
+
+    var post = await Post.findByIdAndUpdate(postId, { [option] : { likes: userId } }, { new: true })
+    .catch(err => {
+        console.log(err);
+        res.sendStatus(400);
+    })
+
+    return res.status(200).send(post);
+})
+
 module.exports = router;
