@@ -1,10 +1,12 @@
 // Contain shared code each page can use, can reuse behavior for certain code blocks
 
-$("#postTextarea").keyup(event => {
+$("#postTextarea, #replyTextArea").keyup(event => {
     var textbox = $(event.target);
     var value = textbox.val().trim();
+
+    var isModal = textbox.parents(".modal").length == 1;
     
-    var submitButton = $("#submitPostButton");
+    var submitButton = isModal ? $("#submitReplyButton") : $("#submitPostButton");
     if (submitButton.length == 0) return alert("No submit button found");
     if (value == "") {
         // set the button property of disabled to true
@@ -15,20 +17,49 @@ $("#postTextarea").keyup(event => {
     submitButton.prop("disabled", false);
 })
 
-$("#submitPostButton").click((event) => {
+$("#submitPostButton, #submitReplyButton").click((event) => {
     var button = $(event.target);
-    var textbox = $("#postTextarea");
+
+    var isModal = button.parents(".modal").length == 1;
+
+    var textbox = isModal ? $("#replyTextArea") : $("#postTextarea");
 
     var data = {
         content: textbox.val()
     }
+
+    if (isModal) {
+        var postId = button.data().id;
+        if (postId == null) return alert("id is null");
+        data.replyTo = postId;
+    }
     // After handling post request, set the button to disabled state and clear the input box
     $.post("/api/posts", data, postData => {
-        var html = createPostHTML(postData);
-        $(".postsContainer").prepend(html);
-        textbox.val("");
-        button.prop("disabled", true);
+        
+        if (postData.replyTo) {
+            location.reload();
+        } else {
+            var html = createPostHTML(postData);
+            $(".postsContainer").prepend(html);
+            textbox.val("");
+            button.prop("disabled", true);
+        }
     })
+})
+
+$("#replyModal").on("show.bs.modal", (event) => {
+    var button = $(event.relatedTarget);
+    var post_id = getPostIdFromElement(button);
+    $("#submitReplyButton").data("id", post_id);
+
+    $.get('/api/posts/' + post_id, results => {
+        outputPost(results, $("#originalPostContainer"));
+    })
+
+})
+
+$("#replyModal").on("hidden.bs.modal", (event) => {
+    $("#originalPostContainer").html("");
 })
 
 $(document).on("click", ".likeButton", event => {
@@ -114,6 +145,21 @@ function createPostHTML(postData) {
                         </span>`
     }
 
+    var replyFlag = "";
+    if (postData.replyTo) {
+        if (!postData.replyTo._id) {
+            return alert("User not populated");
+        } else if (!postData.replyTo.postedBy._id) {
+            return alert("PostedBy not populated");
+        }
+
+        var replyToUsername = postData.replyTo.postedBy.userName;
+        replyFlag = `<div class='replyFlag'>
+                        Replying to <a href='/profile/${replyToUsername}'>@${replyToUsername}<a>
+                    </div>
+                    `
+    }
+
     return `<div class='post' data-id='${postData._id}'>
                 <div class='postActionContainer'>
                     ${retweetText}
@@ -128,12 +174,13 @@ function createPostHTML(postData) {
                             <span class='username'>@${postedBy.userName}</span>
                             <span class='date'>${timeStamp}</span>
                         </div>
+                        ${replyFlag}
                         <div class='postBody'>
                             <span>${postData.content}</span>
                         </div>
                         <div class='postFooter'>
                             <div class='postButtonContainer'>
-                                <button>
+                                <button data-toggle="modal" data-target="#replyModal">
                                     <i class='far fa-comment'></i> 
                                 </button>
                             </div>

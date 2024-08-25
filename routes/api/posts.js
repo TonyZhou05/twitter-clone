@@ -5,23 +5,14 @@ const Post = require('../../schemas/postSchemas');
 const User = require('../../schemas/UserSchema');
 
 // render the login root page
-router.get("/", (req, res, next) => {
-    Post.find()
-    .populate("postedBy")
-    .populate("retweetData")
-    .sort({ "createdAt": -1 })
-    .then(async results => {
-        results = await User.populate(results, { path: "retweetData.postedBy"});
-        res.status(200).send(results);
-    })
-    .catch(error => {
-        console.log(error);
-        res.sendStatus(400);
-    })
+router.get("/", async (req, res, next) => {
+    var results = await getPosts({});
+    res.status(200).send(results);
 })
 
 // Post request router that defines the post endpoint
 router.post("/", async (req, res, next) => {
+
     // No content is sent, set status to 400
     if (!req.body.content) {
         console.log("Content param not sent with request");
@@ -30,7 +21,11 @@ router.post("/", async (req, res, next) => {
     // Create the postData using the postSchema from req.body and req.session
     var postData = {
         content: req.body.content,
-        postedBy: req.session.user
+        postedBy: req.session.user,
+    }
+
+    if (req.body.replyTo) {
+        postData.replyTo = req.body.replyTo;
     }
 
     Post.create(postData)
@@ -38,6 +33,7 @@ router.post("/", async (req, res, next) => {
         // Populate the postedBy field with User object field
         newPost = await User.populate(newPost, { path: 'postedBy' })
         // 201 for created
+        console.log(newPost);
         res.status(201).send(newPost);
     })
     // Error handling
@@ -46,6 +42,16 @@ router.post("/", async (req, res, next) => {
         res.sendStatus(400);
     })
 });
+
+router.get("/:id", async (req, res, next) => {
+    
+    
+    var postId = req.params.id;
+
+    var results = await getPosts({ _id: postId });
+    results = results[0];
+    return res.status(200).send(results);
+})
 
 router.put("/:id/like", async (req, res, next) => {
     var postId = req.params.id;
@@ -108,5 +114,18 @@ router.post("/:id/retweet", async (req, res, next) => {
 
     return res.status(200).send(post);
 })
+
+async function getPosts(filter) {
+    var results = await Post.find(filter)
+    .populate("postedBy")
+    .populate("retweetData")
+    .populate("replyTo")
+    .sort({ "createdAt": -1 })
+    .catch(error => console.log(error))
+
+    results = await User.populate(results, { path: "replyTo.postedBy" });
+
+    return await User.populate(results, { path: "retweetData.postedBy" });
+}
 
 module.exports = router;

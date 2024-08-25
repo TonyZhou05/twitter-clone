@@ -7,6 +7,10 @@ $(document).ready(() => {
 function outputPost(results, container) {
     container.html("");
 
+    if (!Array.isArray(results)) {
+        results = [results];
+    }
+
     // for each posts
     results.forEach(result => {
         var html = createPostHTML(result);

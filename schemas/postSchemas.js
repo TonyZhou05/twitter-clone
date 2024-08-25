@@ -9,10 +9,11 @@ const postSchema = new Schema({
     pinned: Boolean,
     likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     retweetUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    retweetData: { type: Schema.Types.ObjectId, ref: 'Post' }
+    retweetData: { type: Schema.Types.ObjectId, ref: 'Post' },
+    replyTo: { type: Schema.Types.ObjectId, ref: 'Post' }
 
 }, { timestamps:true });
 
-var User = mongoose.model('Post', postSchema);
+var Post = mongoose.model('Post', postSchema);
 
-module.exports = User;
+module.exports = Post;
