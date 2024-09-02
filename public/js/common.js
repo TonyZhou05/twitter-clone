@@ -53,9 +53,8 @@ $("#replyModal").on("show.bs.modal", (event) => {
     $("#submitReplyButton").data("id", post_id);
 
     $.get('/api/posts/' + post_id, results => {
-        outputPost(results, $("#originalPostContainer"));
+        outputPost(results.postData, $("#originalPostContainer"));
     })
-
 })
 
 $("#replyModal").on("hidden.bs.modal", (event) => {
@@ -105,6 +104,16 @@ $(document).on("click", ".retweetButton", event => {
     })
 })
 
+$(document).on("click", ".post", event => {
+    var element = $(event.target);
+    var post_id = getPostIdFromElement(element);
+
+    // onclick the post but not one of the buttons
+    if (post_id != undefined && !element.is("button")) {
+        window.location.href = '/posts/' + post_id;
+    }
+})
+
 function getPostIdFromElement(element) {
     // Get the postId for the nearest class with the classname 'post'
     var isRoot = element.hasClass("post");
@@ -115,7 +124,7 @@ function getPostIdFromElement(element) {
 
     return postId;
 }
-function createPostHTML(postData) {
+function createPostHTML(postData, largeFont = false) {
 
     if(postData == null) return alert("post object is null");
 
@@ -136,6 +145,8 @@ function createPostHTML(postData) {
     
     var likeButtonActiveClass = postData.likes.includes(userLoggedIn._id) ? "active": "";
     var retweetButtonActiveClass = postData.retweetUsers.includes(userLoggedIn._id) ? "active": "";
+    var largeFontClass = largeFont ? "largeFont" : "";
+
     
     var retweetText = "";
     if (isRetweet) {
@@ -146,7 +157,7 @@ function createPostHTML(postData) {
     }
 
     var replyFlag = "";
-    if (postData.replyTo) {
+    if (postData.replyTo && postData.replyTo._id) {
         if (!postData.replyTo._id) {
             return alert("User not populated");
         } else if (!postData.replyTo.postedBy._id) {
@@ -160,7 +171,7 @@ function createPostHTML(postData) {
                     `
     }
 
-    return `<div class='post' data-id='${postData._id}'>
+    return `<div class='post ${largeFontClass}' data-id='${postData._id}'>
                 <div class='postActionContainer'>
                     ${retweetText}
                 </div>
@@ -200,6 +211,42 @@ function createPostHTML(postData) {
                     </div>
                 </div>
             </div>`
+}
+
+function outputPost(results, container) {
+    container.html("");
+
+    if (!Array.isArray(results)) {
+        results = [results];
+    }
+
+    // for each posts
+    results.forEach(result => {
+        var html = createPostHTML(result);
+        container.append(html);
+    });
+
+    if (results.length == 0) {
+        container.append('<span class="noResult">Nothing to show</span>');
+    }
+}
+
+function outputPostWithReplies (results, container) {
+    container.html("");
+
+    if (results.replyTo !== undefined && !results.replyTo._id !== undefined) {
+        var html = createPostHTML(results.replyTo);
+        container.append(html);
+    }
+
+    var mainPostHTML = createPostHTML(results.postData, true);
+    container.append(mainPostHTML);
+
+    // for each posts
+    results.replies.forEach(result => {
+        var html = createPostHTML(result);
+        container.append(html);
+    });
 }
 
 function timeDifference(current, previous) {
