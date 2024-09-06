@@ -57,6 +57,36 @@ $("#replyModal").on("show.bs.modal", (event) => {
     })
 })
 
+$("#deletePostModal").on("show.bs.modal", (event) => {
+    var button = $(event.relatedTarget);
+    var post_id = getPostIdFromElement(button);
+    $("#deletePostButton").data("id", post_id);
+
+    console.log($("#deletePostButton").data().id)
+
+    $.get('/api/posts/' + post_id, results => {
+        outputPost(results.postData, $("#originalPostContainer"));
+    })
+})
+
+$('#deletePostButton').click(event => {
+    var id = $(event.target).data("id");
+
+    $.ajax({
+        url: `/api/posts/${id}`,
+        type: 'DELETE',
+        success: (data, status, xhr) => {
+
+            if (xhr.status != 202) {
+                alert("Could not delete post");
+                return
+            }
+            
+            location.reload();
+        }
+    })
+})
+
 $("#replyModal").on("hidden.bs.modal", (event) => {
     $("#originalPostContainer").html("");
 })
@@ -171,6 +201,11 @@ function createPostHTML(postData, largeFont = false) {
                     `
     }
 
+    var buttons = "";
+    if (postData.postedBy._id == userLoggedIn._id) {
+        buttons = `<button data-id="${postData._id}" data-toggle="modal" data-target="#deletePostModal"><i class='fas fa-times'></i></button>`
+    }
+
     return `<div class='post ${largeFontClass}' data-id='${postData._id}'>
                 <div class='postActionContainer'>
                     ${retweetText}
@@ -184,6 +219,7 @@ function createPostHTML(postData, largeFont = false) {
                             <a href='/profile/${postedBy.userName}' class='displayName'>${displayName}</a>
                             <span class='username'>@${postedBy.userName}</span>
                             <span class='date'>${timeStamp}</span>
+                            ${buttons}
                         </div>
                         ${replyFlag}
                         <div class='postBody'>
